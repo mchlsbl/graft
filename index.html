@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GRAFT</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app-container">
+  <h1> graft scoreboard</h1>
+
+  <!-- Player Switcher -->
+  <div class="player-bar" id="playerBar"></div>
+
+  <!-- Section 1: cargo -->
+  <div class="section sec-cargo">
+    <div class="section-title">cargo</div>
+    <div class="cargo-input-group">
+      <input type="number" id="cargoValue" placeholder="Score for each completed cargo." min="-50">
+      <button class="button" onclick="addManifest()">+</button>
+    </div>
+    <div class="cargo-list" id="cargoList"></div>
+  </div>
+
+  <!-- Section 2: Badges -->
+  <div class="section sec-badges">
+    <div class="section-title">Badges</div>
+    <div class="badge-row" id="goldBadges"></div>
+    <div class="badge-row" id="silverBadges"></div>
+  </div>
+
+  <!-- Section 3: Compost -->
+  <div class="section sec-compost">
+    <div class="section-title">Compost</div>
+<div class="compost-row">
+    <label style="font-size: 18px; font-weight: bold;">Number of cards in compost pile:</label>
+    <input type="number" id="compostCards" value="0" min="0" onchange="updateCurrentPlayerCompost()" style="margin-top: 4px;">
+    </div>  
+    <label style="font-size: 18px; font-weight: bold; margin-top: 8px; display: block;">Card Value (Increased by shipped Recycle cards):</label>
+    <div class="multiplier-selector">
+      <div class="mult-btn selected" onclick="setCompostMult(1)">1</div>
+      <div class="mult-btn" onclick="setCompostMult(2)">2</div>
+      <div class="mult-btn" onclick="setCompostMult(3)">3</div>
+      <div class="mult-btn" onclick="setCompostMult(4)">4</div>
+    </div>
+  </div>
+
+  <button class="calc-btn" onclick="calculateScores()">SUBMIT</button>
+
+  <!-- Leaderboard -->
+  <div class="section" id="resultsSection" style="display: none;">
+    <div class="section-title" style="background: #3B3A54; color: white;">Final Results</div>
+    <table class="results-table">
+      <thead>
+        <tr>
+          <th>Player</th>
+          <th>Total Pts</th>
+        </tr>
+      </thead>
+      <tbody id="resultsBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  const colors = [
+    { name: 'Shrimp', hex: 'var(--shrimp)' },
+    { name: 'Chicken', hex: 'var(--chicken)' },
+    { name: 'Cow', hex: 'var(--cow)' },
+    { name: 'Sheep', hex: 'var(--sheep)' },
+    { name: 'Crab', hex: 'var(--crab)' }
+  ];
+
+  // State for 5 players
+  let players = colors.map((c, i) => ({
+    id: i,
+    color: c.name,
+    hex: c.hex,
+    cargo: [],
+    badges: {
+      gold: [null, null], // null, 'first' (+5), or 'under' (+2)
+      silver: [null, null, null] // null, 'first' (+2), or 'under' (+1)
+    },
+    compostCount: 0,
+    compostMult: 1
+  }));
+
+  let activePlayerIndex = -1;
+
+  function init() {
+    renderPlayerBar();
+    loadPlayerForm();
+  }
+
+  function renderPlayerBar() {
+    const bar = document.getElementById('playerBar');
+    bar.innerHTML = '';
+    players.forEach((p, index) => {
+      const btn = document.createElement('div');
+      btn.className = `player-btn ${index === activePlayerIndex ? 'active' : ''}`;
+      btn.onclick = () => switchPlayer(index);
+      btn.innerHTML = `
+        <div class="dot" style="background: ${p.hex}"></div>
+        ${p.color}
+      `;
+      bar.appendChild(btn);
+    });
+  }
+
+  function switchPlayer(index) {
+    activePlayerIndex = index;
+    renderPlayerBar();
+    loadPlayerForm();
+  }
+
+  function loadPlayerForm() {
+    const p = players[activePlayerIndex];
+
+    // Load cargo
+    rendercargo();
+
+    // Load Badges
+    renderBadgesUI();
+
+    // Load Compost
+    document.getElementById('compostCards').value = p.compostCount;
+    setCompostMultUI(p.compostMult);
+  }
+
+  // --- 1. MANIFESTS LOGIC ---
+  function addManifest() {
+    const input = document.getElementById('cargoValue');
+    const val = parseInt(input.value);
+    if (val > 0) {
+      players[activePlayerIndex].cargo.push(val);
+      input.value = '';
+      rendercargo();
+    }
+  }
+
+  function removeManifest(mIndex) {
+    players[activePlayerIndex].cargo.splice(mIndex, 1);
+    rendercargo();
+  }
+
+  function rendercargo() {
+    const list = document.getElementById('cargoList');
+    list.innerHTML = '';
+    players[activePlayerIndex].cargo.forEach((m, idx) => {
+      list.innerHTML += `
+        <div class="cargo-item">
+          <span>📦 Manifest worth ${m} points.</span>
+          <span class="remove-btn" onclick="removeManifest(${idx})">✖</span>
+        </div>
+      `;
+    });
+  }
+
+  // --- 2. BADGES LOGIC ---
+  function renderBadgesUI() {
+    const p = players[activePlayerIndex];
+    
+    // Gold
+    const goldContainer = document.getElementById('goldBadges');
+    goldContainer.innerHTML = '';
+    p.badges.gold.forEach((val, i) => {
+      goldContainer.innerHTML += `
+
+<div class="badge-wrapper">
+    <div class="badge-card gold">
+        <img src="images/gold.png" class="medal">
+<input type="checkbox" ${val === 'first' ? 'checked' : ''} onclick="toggleBadge('gold', ${i}, 'first')">
+    </div>
+ <label><input type="checkbox" ${val === 'under' ? 'checked' : ''} onclick="toggleBadge('gold', ${i}, 'under')"></label>
+</div>
+      `;
+    });
+
+    // Silver
+    const silverContainer = document.getElementById('silverBadges');
+    silverContainer.innerHTML = '';
+    p.badges.silver.forEach((val, i) => {
+      silverContainer.innerHTML += `
+
+<div class="badge-wrapper">
+    <div class="badge-card silver">
+        <img src="images/silver.png" class="medal">
+<input type="checkbox" ${val === 'first' ? 'checked' : ''} onclick="toggleBadge('silver', ${i}, 'first')">
+    </div>
+ <label><input type="checkbox" ${val === 'under' ? 'checked' : ''} onclick="toggleBadge('silver', ${i}, 'under')"></label>
+</div>
+      `;
+    });
+  }
+
+  function toggleBadge(type, badgeIdx, option) {
+    const current = players[activePlayerIndex].badges[type][badgeIdx];
+    // Exclusive toggle logic (if clicking the same, uncheck; otherwise set to new option)
+    players[activePlayerIndex].badges[type][badgeIdx] = (current === option) ? null : option;
+    renderBadgesUI();
+  }
+
+  // --- 3. COMPOST LOGIC ---
+  function updateCurrentPlayerCompost() {
+    const val = parseInt(document.getElementById('compostCards').value) || 0;
+    players[activePlayerIndex].compostCount = val;
+  }
+
+  function setCompostMult(mult) {
+    players[activePlayerIndex].compostMult = mult;
+    setCompostMultUI(mult);
+  }
+
+  function setCompostMultUI(mult) {
+    const btns = document.querySelectorAll('.mult-btn');
+    btns.forEach((btn, idx) => {
+      if (idx + 1 === mult) {
+        btn.classList.add('selected');
+      } else {
+        btn.classList.remove('selected');
+      }
+    });
+  }
+
+  // --- CALCULATE TOTALS ---
+  function calculateScores() {
+    updateCurrentPlayerCompost(); // Save active input first
+
+    const scoredPlayers = players.map(p => {
+      // cargo Sum
+      const cargoSum = p.cargo.reduce((a, b) => a + b, 0);
+
+      // Badges Sum
+      let badgeSum = 0;
+      p.badges.gold.forEach(g => {
+        if (g === 'first') badgeSum += 10;
+        if (g === 'under') badgeSum += 5;
+      });
+      p.badges.silver.forEach(s => {
+        if (s === 'first') badgeSum += 5;
+        if (s === 'under') badgeSum += 2;
+      });
+
+      // Compost Sum
+      const compostSum = p.compostCount * p.compostMult;
+
+      return {
+        color: p.color,
+        hex: p.hex,
+        total: cargoSum + badgeSum + compostSum
+      };
+    });
+
+    // Sort descending
+    scoredPlayers.sort((a, b) => b.total - a.total);
+
+    // Display Table
+    const body = document.getElementById('resultsBody');
+    body.innerHTML = '';
+    scoredPlayers.forEach((p, rank) => {
+      body.innerHTML += `
+        <tr>
+          <td style="color:white; background: ${p.hex}; font-weight: bold;">${p.color}</td>
+          <td><b>${p.total}</b> pts</td>
+        </tr>
+      `;
+    });
+
+    document.getElementById('resultsSection').style.display = 'block';
+  }
+
+  init();
+</script>
+</body>
+</html>
