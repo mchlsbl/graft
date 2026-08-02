@@ -56,6 +56,9 @@
       <thead>
         <tr>
           <th>Player</th>
+          <th>Cargo</th>
+          <th>Badges</th>
+          <th>Compost</th>
           <th>Total Pts</th>
         </tr>
       </thead>
@@ -263,6 +266,9 @@
       body.innerHTML += `
         <tr>
           <td style="color:white; background: ${p.hex}; font-weight: bold;">${p.color}</td>
+          <td><b>${p.cargoSum}</b> pts</td>
+          <td><b>${p.badgeSum}</b> pts</td>
+          <td><b>${p.compostSum}</b> pts</td>
           <td><b>${p.total}</b> pts</td>
         </tr>
       `;
