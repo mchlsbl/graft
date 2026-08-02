@@ -136,7 +136,7 @@
   function addManifest() {
     const input = document.getElementById('cargoValue');
     const val = parseInt(input.value);
-    if (val > 0) {
+    if (val > -50) {
       players[activePlayerIndex].cargo.push(val);
       input.value = '';
       rendercargo();
