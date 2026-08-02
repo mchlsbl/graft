@@ -252,6 +252,9 @@
       return {
         color: p.color,
         hex: p.hex,
+        cargo: cargoSum,
+        badge: badgeSum,
+        compost: compostSum,
         total: cargoSum + badgeSum + compostSum
       };
     });
@@ -266,9 +269,9 @@
       body.innerHTML += `
         <tr>
           <td style="color:white; background: ${p.hex}; font-weight: bold;">${p.color}</td>
-          <td><b>${p.cargoSum}</b> pts</td>
-          <td><b>${p.badgeSum}</b> pts</td>
-          <td><b>${p.compostSum}</b> pts</td>
+          <td><b>${p.cargo}</b> pts</td>
+          <td><b>${p.badge}</b> pts</td>
+          <td><b>${p.compost}</b> pts</td>
           <td><b>${p.total}</b> pts</td>
         </tr>
       `;
