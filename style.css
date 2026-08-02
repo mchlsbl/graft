@@ -87,7 +87,7 @@ h1 {
     .player-btn {
       flex: 1;
       min-width: 6px;
-    background: ${p.hex};
+    background: white;
       border: 3px solid var(--border-color);
       border-radius: 10px;
       padding: 5px 0px;
@@ -103,9 +103,9 @@ h1 {
     }
 
     .dot {
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      border-radius: 25%;
       margin: 0 auto 4px;
       border: 2px solid var(--border-color);
     }
