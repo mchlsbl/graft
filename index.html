@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GRAFT SCOREBOARD</title>
+  <title>GRAFT SCOREBOARD v2.6</title>
   <link rel="stylesheet" href="style.css">
 
 <script type="module">
@@ -128,33 +128,38 @@
   }
 
   // --- FIRESTORE FUNCTIONS ---
-  async function saveGameState() {
-    if (!window.db) return;
-    try {
-      await window.setDoc(window.doc(window.db, "games", "game_save"), {
-        players: players,
-        updatedAt: new Date()
-      });
-      console.log("Zapisano w Firebase!");
-    } catch (e) {
-      console.error("Błąd zapisu:", e);
-    }
-  }
+async function saveGameState() {
+  // Jeśli właśnie trwa aktualizacja z serwera - NIE ZAPISUJ!
+  if (isRemoteUpdating || !window.db) return;
 
+  try {
+    await window.setDoc(window.doc(window.db, "games", "game_save"), {
+      players: players,
+      updatedAt: new Date()
+    });
+    console.log("Zapisano w Firebase!");
+  } catch (e) {
+    console.error("Błąd zapisu:", e);
+  }
+}
+
+// Flaga zapobiegająca pętli
+let isRemoteUpdating = false;
 window.startFirebaseListener = function() {
   if (!window.db) return;
-
-  console.log("Łączenie z bazą na żywo...");
-
   window.onSnapshot(window.doc(window.db, "games", "game_save"), (docSnapshot) => {
     if (docSnapshot.exists()) {
-      console.log("Odebrano nowe dane z serwera!", docSnapshot.data());
       const data = docSnapshot.data();
-      
       if (data.players) {
+        // 1. Włączamy blokadę zapisu na czas aktualizacji UI
+        isRemoteUpdating = true;
         players = data.players;
         loadPlayerForm();
-        calculateScores(false); // Aktualizuje tabelę bez pętli zapisywania
+        calculateScores(false); // Wyświetl wyniki bez zapisu
+        // 2. Wyłączamy blokadę tuż po zakończeniu rysowania UI
+        setTimeout(() => {
+          isRemoteUpdating = false;
+        }, 100);
       }
     }
   });
