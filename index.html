@@ -121,7 +121,6 @@
   }));
 
   let activePlayerIndex = -1;
-
   function init() {
     renderPlayerBar();
     renderBadgesUI();
@@ -385,6 +384,28 @@ const body = document.getElementById('resultsBody');
     document.getElementById('resultsSection').style.display = 'block';
     if (shouldSave) saveGameState();
   }
+
+// 1. Lista Twoich obrazków (podaj poprawne ścieżki do plików)
+const backgroundImages = [
+  'images/bg.png',
+  'images/bg2.png',
+  'images/bg3.png',
+  'images/bg4.png',
+  'images/bg5.png'
+];
+// 2. Funkcja losująca i ustawiająca tło
+function setRandomBackgroundImage() {
+  // Losujemy indeks z tablicy
+  const randomIndex = Math.floor(Math.random() * backgroundImages.length);
+  const selectedImage = backgroundImages[randomIndex];
+  // Ustawiamy tło dla <body>
+  document.body.style.backgroundImage = `url('${selectedImage}')`;
+  document.body.style.backgroundSize = 'cover';      // Rozciąga obrazek na cały ekran
+  document.body.style.backgroundPosition = 'center'; // Wyśrodkowuje obrazek
+  document.body.style.backgroundAttachment = 'fixed'; // Tło nie przewija się wraz ze stroną
+}
+// 3. Wywołanie funkcji od razu przy załadowaniu skryptu
+setRandomBackgroundImage();
 
   init();
 </script>
