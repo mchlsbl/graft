@@ -205,6 +205,7 @@ window.startFirebaseListener = function() {
     if (val === 1234) {
       if (confirm("Reset all player scores to 0?")) {
         resetAllScores();
+        saveGameState();
       }
       input.value = '';
       return;
