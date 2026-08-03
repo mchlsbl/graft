@@ -7,12 +7,10 @@
   <link rel="stylesheet" href="style.css">
 
 <script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-app.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  // DODANO IMPORT FIRESTORE:
+  import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-  // Your web app's Firebase configuration
   const firebaseConfig = {
     apiKey: "AIzaSyDLjPD40IRs_HW-Z-l7Md6GxNSxKR9p5Pk",
     authDomain: "graft-scoreboard.firebaseapp.com",
@@ -22,11 +20,9 @@
     appId: "1:640180014623:web:d56045e687c5841fb44f2a"
   };
 
-  // Initialize Firebase & Firestore
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  // Udostępniamy funkcje do globalnego użytku w naszym kodzie
   window.db = db;
   window.doc = doc;
   window.setDoc = setDoc;
@@ -97,23 +93,6 @@
 </div>
 
 <script>
-
-// Funkcja zapisująca stan gry do Firestore
-async function saveGameState() {
-  if (!window.db) return;
-  
-  try {
-    // Zapisujemy całą tablicę 'players' do dokumentu "game_save" w kolekcji "games"
-    await window.setDoc(window.doc(window.db, "games", "game_save"), {
-      players: players,
-      updatedAt: new Date()
-    });
-    console.log("Zapisano na serwerze!");
-  } catch (e) {
-    console.error("Błąd zapisu:", e);
-  }
-}
-
   const colors = [
     { name: 'Shrimp', hex: 'var(--shrimp)' },
     { name: 'Chicken', hex: 'var(--chicken)' },
@@ -129,8 +108,8 @@ async function saveGameState() {
     hex: c.hex,
     cargo: [],
     badges: {
-      gold: [null, null], // null, 'first' (+5), or 'under' (+2)
-      silver: [null, null, null] // null, 'first' (+2), or 'under' (+1)
+      gold: [null, null],
+      silver: [null, null, null]
     },
     compostCount: 0,
     compostMult: 1
@@ -141,27 +120,37 @@ async function saveGameState() {
   function init() {
     renderPlayerBar();
     renderBadgesUI();
-
-function listenToRemoteChanges() {
-  if (!window.db) return;
-
-  // Nasłuchujemy zmian w dokumencie "game_room_1"
-  window.onSnapshot(window.doc(window.db, "games", "game_room_1"), (doc) => {
-    if (doc.exists()) {
-      const data = doc.data();
-      
-      // Podmieniamy naszą lokalną tablicę graczy na tę z serwera
-      players = data.players;
-      
-      // Odświeżamy widok na ekranie telefonu!
-      loadPlayerForm();
-      calculateScores(); // Jeśli chcesz od razu aktualizować tabelę wyników
-    }
-  });
-}
-
+    listenToRemoteChanges(); // Wywołujemy nasłuchiwanie na żywo przy starcie!
   }
 
+  // --- FIRESTORE FUNCTIONS ---
+  async function saveGameState() {
+    if (!window.db) return;
+    try {
+      await window.setDoc(window.doc(window.db, "games", "game_save"), {
+        players: players,
+        updatedAt: new Date()
+      });
+      console.log("Zapisano w Firebase!");
+    } catch (e) {
+      console.error("Błąd zapisu:", e);
+    }
+  }
+
+  function listenToRemoteChanges() {
+    if (!window.db) return;
+
+    window.onSnapshot(window.doc(window.db, "games", "game_save"), (doc) => {
+      if (doc.exists()) {
+        const data = doc.data();
+        players = data.players;
+        loadPlayerForm();
+        calculateScores(false); // Aktualizuje tabelę bez ponownego wysyłania do bazy
+      }
+    });
+  }
+
+  // --- UI & LOGIC ---
   function renderPlayerBar() {
     const bar = document.getElementById('playerBar');
     bar.innerHTML = '';
@@ -185,137 +174,120 @@ function listenToRemoteChanges() {
 
   function loadPlayerForm() {
     const p = activePlayerIndex === -1
-    ? {
-        badges: {
-            gold: [null, null],
-            silver: [null, null, null]
-        }
-    }
-    : players[activePlayerIndex];
+      ? { badges: { gold: [null, null], silver: [null, null, null] }, cargo: [], compostCount: 0, compostMult: 1 }
+      : players[activePlayerIndex];
 
-    // Load cargo
     rendercargo();
-
-    // Load Badges
     renderBadgesUI();
-
-    // Load Compost
     document.getElementById('compostCards').value = p.compostCount;
     setCompostMultUI(p.compostMult);
   }
 
-  // --- 1. MANIFESTS LOGIC ---
+  // 1. CARGO
   function addManifest() {
+    if (activePlayerIndex === -1) return alert("Select a player first!");
     const input = document.getElementById('cargoValue');
     const val = parseInt(input.value);
-    if (val > -50) {
+    if (!isNaN(val) && val > -50) {
       players[activePlayerIndex].cargo.push(val);
       input.value = '';
       rendercargo();
+      saveGameState();
     }
   }
 
   function removeManifest(mIndex) {
+    if (activePlayerIndex === -1) return;
     players[activePlayerIndex].cargo.splice(mIndex, 1);
     rendercargo();
+    saveGameState();
   }
 
   function rendercargo() {
     const list = document.getElementById('cargoList');
     list.innerHTML = '';
-    players[activePlayerIndex].cargo.forEach((m, idx) => {
+    const currentCargo = activePlayerIndex === -1 ? [] : players[activePlayerIndex].cargo;
+    currentCargo.forEach((m, idx) => {
       list.innerHTML += `
         <div class="cargo-item">
-          <span>📦 Manifest worth ${m} points.</span>
+          <span>📦 Cargo worth ${m} pts</span>
           <span class="remove-btn" onclick="removeManifest(${idx})">✖</span>
         </div>
       `;
     });
   }
 
-  // --- 2. BADGES LOGIC ---
+  // 2. BADGES
   function renderBadgesUI() {
-
     const p = activePlayerIndex === -1
-        ? {
-            badges: {
-                gold: [null, null],
-                silver: [null, null, null]
-            }
-        }
-        : players[activePlayerIndex];
-    
-    // Gold
+      ? { badges: { gold: [null, null], silver: [null, null, null] } }
+      : players[activePlayerIndex];
+
     const goldContainer = document.getElementById('goldBadges');
     goldContainer.innerHTML = '';
     p.badges.gold.forEach((val, i) => {
       goldContainer.innerHTML += `
-
-<div class="badge-wrapper">
-    <div class="badge-card gold">
-        <img src="images/gold.png" class="medal">
-<input type="checkbox" ${val === 'first' ? 'checked' : ''} onclick="toggleBadge('gold', ${i}, 'first')">
-    </div>
- <label><input type="checkbox" ${val === 'under' ? 'checked' : ''} onclick="toggleBadge('gold', ${i}, 'under')"></label>
-</div>
+        <div class="badge-wrapper">
+          <div class="badge-card gold">
+            <img src="images/gold.png" class="medal">
+            <input type="checkbox" ${val === 'first' ? 'checked' : ''} onclick="toggleBadge('gold', ${i}, 'first')">
+          </div>
+          <label><input type="checkbox" ${val === 'under' ? 'checked' : ''} onclick="toggleBadge('gold', ${i}, 'under')"></label>
+        </div>
       `;
     });
 
-    // Silver
     const silverContainer = document.getElementById('silverBadges');
     silverContainer.innerHTML = '';
     p.badges.silver.forEach((val, i) => {
       silverContainer.innerHTML += `
-
-<div class="badge-wrapper">
-    <div class="badge-card silver">
-        <img src="images/silver.png" class="medal">
-<input type="checkbox" ${val === 'first' ? 'checked' : ''} onclick="toggleBadge('silver', ${i}, 'first')">
-    </div>
- <label><input type="checkbox" ${val === 'under' ? 'checked' : ''} onclick="toggleBadge('silver', ${i}, 'under')"></label>
-</div>
+        <div class="badge-wrapper">
+          <div class="badge-card silver">
+            <img src="images/silver.png" class="medal">
+            <input type="checkbox" ${val === 'first' ? 'checked' : ''} onclick="toggleBadge('silver', ${i}, 'first')">
+          </div>
+          <label><input type="checkbox" ${val === 'under' ? 'checked' : ''} onclick="toggleBadge('silver', ${i}, 'under')"></label>
+        </div>
       `;
     });
   }
 
   function toggleBadge(type, badgeIdx, option) {
+    if (activePlayerIndex === -1) return alert("Select a player first!");
     const current = players[activePlayerIndex].badges[type][badgeIdx];
-    // Exclusive toggle logic (if clicking the same, uncheck; otherwise set to new option)
     players[activePlayerIndex].badges[type][badgeIdx] = (current === option) ? null : option;
     renderBadgesUI();
+    saveGameState();
   }
 
-  // --- 3. COMPOST LOGIC ---
+  // 3. COMPOST
   function updateCurrentPlayerCompost() {
+    if (activePlayerIndex === -1) return;
     const val = parseInt(document.getElementById('compostCards').value) || 0;
     players[activePlayerIndex].compostCount = val;
+    saveGameState();
   }
 
   function setCompostMult(mult) {
+    if (activePlayerIndex === -1) return alert("Select a player first!");
     players[activePlayerIndex].compostMult = mult;
     setCompostMultUI(mult);
+    saveGameState();
   }
 
   function setCompostMultUI(mult) {
     const btns = document.querySelectorAll('.mult-btn');
     btns.forEach((btn, idx) => {
-      if (idx + 1 === mult) {
-        btn.classList.add('selected');
-      } else {
-        btn.classList.remove('selected');
-      }
+      btn.classList.toggle('selected', idx + 1 === mult);
     });
   }
 
-  // --- CALCULATE TOTALS ---
-  function calculateScores() {
-    updateCurrentPlayerCompost(); // Save active input first
+  // CALCULATE
+  function calculateScores(shouldSave = true) {
+    if (activePlayerIndex !== -1) updateCurrentPlayerCompost();
 
     const scoredPlayers = players.map(p => {
-      // cargo Sum
       const cargoSum = p.cargo.reduce((a, b) => a + b, 0);
-
-      // Badges Sum
       let badgeSum = 0;
       p.badges.gold.forEach(g => {
         if (g === 'first') badgeSum += 10;
@@ -325,8 +297,6 @@ function listenToRemoteChanges() {
         if (s === 'first') badgeSum += 5;
         if (s === 'under') badgeSum += 2;
       });
-
-      // Compost Sum
       const compostSum = p.compostCount * p.compostMult;
 
       return {
@@ -339,13 +309,11 @@ function listenToRemoteChanges() {
       };
     });
 
-    // Sort descending
     scoredPlayers.sort((a, b) => b.total - a.total);
 
-    // Display Table
     const body = document.getElementById('resultsBody');
     body.innerHTML = '';
-    scoredPlayers.forEach((p, rank) => {
+    scoredPlayers.forEach((p) => {
       body.innerHTML += `
         <tr>
           <td style="color:white; background: ${p.hex}; font-weight: bold;">${p.color}</td>
@@ -358,7 +326,7 @@ function listenToRemoteChanges() {
     });
 
     document.getElementById('resultsSection').style.display = 'block';
-saveGameState()
+    if (shouldSave) saveGameState();
   }
 
   init();
