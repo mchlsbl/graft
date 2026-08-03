@@ -8,7 +8,6 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  // DODANO IMPORT FIRESTORE:
   import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -23,10 +22,16 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
+  // Udostępniamy obiekty do okna globalnego
   window.db = db;
   window.doc = doc;
   window.setDoc = setDoc;
   window.onSnapshot = onSnapshot;
+
+  // Aktywujemy nasłuch natychmiast po gotowości Firebase
+  if (typeof window.startFirebaseListener === 'function') {
+    window.startFirebaseListener();
+  }
 </script>
 
 </head>
@@ -120,7 +125,7 @@
   function init() {
     renderPlayerBar();
     renderBadgesUI();
-    listenToRemoteChanges(); // Wywołujemy nasłuchiwanie na żywo przy starcie!
+    calculateScores();
   }
 
   // --- FIRESTORE FUNCTIONS ---
@@ -137,18 +142,24 @@
     }
   }
 
-  function listenToRemoteChanges() {
-    if (!window.db) return;
+window.startFirebaseListener = function() {
+  if (!window.db) return;
 
-    window.onSnapshot(window.doc(window.db, "games", "game_save"), (doc) => {
-      if (doc.exists()) {
-        const data = doc.data();
+  console.log("Łączenie z bazą na żywo...");
+
+  window.onSnapshot(window.doc(window.db, "games", "game_save"), (docSnapshot) => {
+    if (docSnapshot.exists()) {
+      console.log("Odebrano nowe dane z serwera!", docSnapshot.data());
+      const data = docSnapshot.data();
+      
+      if (data.players) {
         players = data.players;
         loadPlayerForm();
-        calculateScores(false); // Aktualizuje tabelę bez ponownego wysyłania do bazy
+        calculateScores(false); // Aktualizuje tabelę bez pętli zapisywania
       }
-    });
-  }
+    }
+  });
+};
 
   // --- UI & LOGIC ---
   function renderPlayerBar() {
@@ -269,7 +280,6 @@
   }
 
   function setCompostMult(mult) {
-    if (activePlayerIndex === -1) return alert("Select a player first!");
     players[activePlayerIndex].compostMult = mult;
     setCompostMultUI(mult);
     saveGameState();
