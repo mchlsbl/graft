@@ -196,7 +196,6 @@ window.startFirebaseListener = function() {
 
   // 1. CARGO
   function addManifest() {
-    if (activePlayerIndex === -1) return alert("Select a player first!");
     const input = document.getElementById('cargoValue');
     const val = parseInt(input.value);
     if (!isNaN(val) && val > -50) {
@@ -264,7 +263,6 @@ window.startFirebaseListener = function() {
   }
 
   function toggleBadge(type, badgeIdx, option) {
-    if (activePlayerIndex === -1) return alert("Select a player first!");
     const current = players[activePlayerIndex].badges[type][badgeIdx];
     players[activePlayerIndex].badges[type][badgeIdx] = (current === option) ? null : option;
     renderBadgesUI();
