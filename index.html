@@ -5,6 +5,34 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GRAFT</title>
   <link rel="stylesheet" href="style.css">
+
+<script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-app.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyDLjPD40IRs_HW-Z-l7Md6GxNSxKR9p5Pk",
+    authDomain: "graft-scoreboard.firebaseapp.com",
+    projectId: "graft-scoreboard",
+    storageBucket: "graft-scoreboard.firebasestorage.app",
+    messagingSenderId: "640180014623",
+    appId: "1:640180014623:web:d56045e687c5841fb44f2a"
+  };
+
+  // Initialize Firebase & Firestore
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  // Udostępniamy funkcje do globalnego użytku w naszym kodzie
+  window.db = db;
+  window.doc = doc;
+  window.setDoc = setDoc;
+  window.onSnapshot = onSnapshot;
+</script>
+
 </head>
 <body>
 
@@ -14,13 +42,14 @@
   <!-- Player Switcher -->
   <div class="player-bar" id="playerBar"></div>
 
-  <!-- Section 1: cargo -->
-  <div class="section sec-cargo">
+ <!-- Section 1: cargo -->
+<div class="section sec-cargo">
     <div class="section-title">cargo</div>
-    <div class="cargo-input-group">
+    <form class="cargo-input-group" onsubmit="event.preventDefault(); addManifest();">
       <input type="number" id="cargoValue" placeholder="Score for each completed cargo." min="-50">
-      <button class="button" onclick="addManifest()">+</button>
-    </div>
+      <button type="submit" class="button">+</button>
+    </form>
+    
     <div class="cargo-list" id="cargoList"></div>
   </div>
 
@@ -68,6 +97,23 @@
 </div>
 
 <script>
+
+// Funkcja zapisująca stan gry do Firestore
+async function saveGameState() {
+  if (!window.db) return;
+  
+  try {
+    // Zapisujemy całą tablicę 'players' do dokumentu "game_save" w kolekcji "games"
+    await window.setDoc(window.doc(window.db, "games", "game_save"), {
+      players: players,
+      updatedAt: new Date()
+    });
+    console.log("Zapisano na serwerze!");
+  } catch (e) {
+    console.error("Błąd zapisu:", e);
+  }
+}
+
   const colors = [
     { name: 'Shrimp', hex: 'var(--shrimp)' },
     { name: 'Chicken', hex: 'var(--chicken)' },
@@ -94,7 +140,26 @@
 
   function init() {
     renderPlayerBar();
-    loadPlayerForm();
+    renderBadgesUI();
+
+function listenToRemoteChanges() {
+  if (!window.db) return;
+
+  // Nasłuchujemy zmian w dokumencie "game_room_1"
+  window.onSnapshot(window.doc(window.db, "games", "game_room_1"), (doc) => {
+    if (doc.exists()) {
+      const data = doc.data();
+      
+      // Podmieniamy naszą lokalną tablicę graczy na tę z serwera
+      players = data.players;
+      
+      // Odświeżamy widok na ekranie telefonu!
+      loadPlayerForm();
+      calculateScores(); // Jeśli chcesz od razu aktualizować tabelę wyników
+    }
+  });
+}
+
   }
 
   function renderPlayerBar() {
@@ -119,7 +184,14 @@
   }
 
   function loadPlayerForm() {
-    const p = players[activePlayerIndex];
+    const p = activePlayerIndex === -1
+    ? {
+        badges: {
+            gold: [null, null],
+            silver: [null, null, null]
+        }
+    }
+    : players[activePlayerIndex];
 
     // Load cargo
     rendercargo();
@@ -163,7 +235,15 @@
 
   // --- 2. BADGES LOGIC ---
   function renderBadgesUI() {
-    const p = players[activePlayerIndex];
+
+    const p = activePlayerIndex === -1
+        ? {
+            badges: {
+                gold: [null, null],
+                silver: [null, null, null]
+            }
+        }
+        : players[activePlayerIndex];
     
     // Gold
     const goldContainer = document.getElementById('goldBadges');
@@ -278,6 +358,7 @@
     });
 
     document.getElementById('resultsSection').style.display = 'block';
+saveGameState()
   }
 
   init();
