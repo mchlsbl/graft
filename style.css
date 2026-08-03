@@ -68,7 +68,7 @@ h1 {
     h1 {
       text-align: center;
       margin: 0 0 15px 0;
-      font-size: 24px;
+      font-size: 36px;
       text-transform: uppercase;
       background: #fff
       border: 3px solid var(--border-color);
@@ -220,13 +220,17 @@ h1 {
     padding: 0px;
   width: 80px;
   height: 100px;
+  background-image: url("images/card.png");
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: cover;
     display: flex;
     flex-direction: column;
     align-items: center;   /* wyśrodkowuje dzieci */
     justify-content: flex-start;
 }
-    .badge-card.gold { background: #fff3bf; }
-    .badge-card.silver { background: #e9ecef; margin-top: 20px;}
+    .badge-card.gold { background-color: #fff3bf; }
+    .badge-card.silver { background-color: #e9ecef; margin-top: 20px;}
 
 
 /* Rozmiar checkboxów*/
