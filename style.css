@@ -22,6 +22,8 @@ h1 {
 }
 
 
+
+
 /*SKOPIOWANE Z PLIKU */
     :root {
       --bg-color: #f2ebd9;
@@ -227,8 +229,12 @@ h1 {
     align-items: center;   /* wyśrodkowuje dzieci */
     justify-content: flex-start;
 }
-    .badge-card.gold { background-color: #fff3bf; }
-    .badge-card.silver { background-color: #e9ecef; margin-top: 20px;}
+//    .badge-card.gold { background-color: #fff3bf; }
+//    .badge-card.silver { background-color: #e9ecef; margin-top: 20px;}
+//    .badge-card.gold { background-color: #FEDB87; }
+//    .badge-card.silver { background-color: #C5CBE1; margin-top: 20px;}
+    .badge-card.gold { background-color: #FEC551; }
+    .badge-card.silver { background-color: #A2ABD4; margin-top: 20px;}
 
 
 /* Rozmiar checkboxów*/
