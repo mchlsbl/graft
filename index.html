@@ -86,9 +86,9 @@
       <thead>
         <tr>
           <th>Player</th>
-          <th>Cargo</th>
-          <th>Badges</th>
-          <th>Compost</th>
+          <th style="font-size: 15px;">Cargos</th>
+          <th style="font-size: 15px;">Badges</th>
+          <th style="font-size: 15px;">Compost</th>
           <th>Total</th>
         </tr>
       </thead>
@@ -353,10 +353,25 @@ window.startFirebaseListener = function() {
 
     scoredPlayers.sort((a, b) => b.total - a.total);
 
-    const body = document.getElementById('resultsBody');
+const body = document.getElementById('resultsBody');
     body.innerHTML = '';
-    scoredPlayers.forEach((p) => {
+    
+    // Dodajemy 'index' do pętli forEach, aby wiedzieć, który to wiersz
+    scoredPlayers.forEach((p, index) => {
+      // Pierwszy gracz w posortowanej tablicy (index 0) to zwycięzca
+      const isWinner = index === 0 && p.total > 0; //opcjonalnie: p.total > 0 zabezpiecza przed złotem, gdy nikt nie ma punktów
+      
+      const totalBgColor = isWinner ? '#FEC551' : 'white';
+
       body.innerHTML += `
+<!--        <tr>
+          <td style="color:white; background: ${p.hex}; font-weight: bold;">${p.color}</td>
+          <td style="background-color: color-mix(in srgb, ${totalBgColor} 60%, transparent); font-size: 14px;"><b>${p.cargo}</b> pts</td>
+          <td style="background-color: color-mix(in srgb, ${totalBgColor} 60%, transparent); font-size: 14px;"><b>${p.badge}</b> pts</td>
+          <td style="background-color: color-mix(in srgb, ${totalBgColor} 60%, transparent); font-size: 14px;"><b>${p.compost}</b> pts</td>
+          <td style="background: ${totalBgColor};"><b>${p.total}</b> pts</td>
+        </tr> -->
+
         <tr>
           <td style="color:white; background: ${p.hex}; font-weight: bold;">${p.color}</td>
           <td><b>${p.cargo}</b> pts</td>
